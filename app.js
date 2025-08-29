@@ -944,7 +944,7 @@ function updateStoreRankAnalytics() {
 
 // Update eligibility display
 function updateEligibilityDisplay() {
-    const container = document.getElementById('eligibilityAnalytics');
+    const container = document.getElementById('eligibilitySection');
     if (!container) return;
     
     // Apply sorting and limits
@@ -1009,6 +1009,9 @@ function updateEligibilityDisplay() {
         });
     }
     
+    // Update table
+    updateEligibilityTable(displayData);
+    
     // Update pagination
     updateAnalyticsPagination('eligibilityPagination', eligibilityData.length, currentEligibilityLimit, eligibilityCurrentPage, (page) => {
         eligibilityCurrentPage = page;
@@ -1018,7 +1021,7 @@ function updateEligibilityDisplay() {
 
 // Update store rank display
 function updateStoreRankDisplay() {
-    const container = document.getElementById('storeRankAnalytics');
+    const container = document.getElementById('storeRankSection');
     if (!container) return;
     
     // Apply limits
@@ -1062,10 +1065,59 @@ function updateStoreRankDisplay() {
         });
     }
     
+    // Update table
+    updateStoreRankTable(displayData);
+    
     // Update pagination
     updateAnalyticsPagination('storeRankPagination', storeRankData.length, currentStoreRankLimit, storeRankCurrentPage, (page) => {
         storeRankCurrentPage = page;
         updateStoreRankDisplay();
+    });
+}
+
+// Update eligibility table
+function updateEligibilityTable(data) {
+    const table = document.getElementById('eligibilityTable');
+    if (!table) return;
+    
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    data.forEach(item => {
+        const total = item.eligible + item.notEligible;
+        const percentage = total > 0 ? ((item.eligible / total) * 100).toFixed(1) : '0.0';
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${item.query}</td>
+            <td>${item.eligible}</td>
+            <td>${item.notEligible}</td>
+            <td>${total}</td>
+            <td>${percentage}%</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Update store rank table
+function updateStoreRankTable(data) {
+    const table = document.getElementById('storeRankTable');
+    if (!table) return;
+    
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    data.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${item.range}</td>
+            <td>${item.count}</td>
+        `;
+        tbody.appendChild(row);
     });
 }
 
