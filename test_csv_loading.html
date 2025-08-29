@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Loading Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; font-family: monospace; white-space: pre-wrap; }
+        button { margin: 5px; padding: 8px 16px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>CSV Loading Test</h1>
+    
+    <div class="test-section">
+        <h3>Test CSV Files</h3>
+        <button onclick="testCleanCSV()">Test clean_image_report.csv</button>
+        <button onclick="testOriginalCSV()">Test eligible_image_report_20250829_1551.csv</button>
+        <button onclick="testBothCSVs()">Test Both CSVs</button>
+        <div id="status" class="log">Ready to test CSV loading...</div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const status = document.getElementById('status');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            
+            if (type === 'success') {
+                status.innerHTML += `<span class="success">${logEntry}</span>`;
+            } else if (type === 'error') {
+                status.innerHTML += `<span class="error">${logEntry}</span>`;
+            } else {
+                status.innerHTML += `<span class="info">${logEntry}</span>`;
+            }
+            
+            console.log(message);
+        }
+        
+        function testCleanCSV() {
+            log('=== Testing clean_image_report.csv ===');
+            
+            fetch('clean_image_report.csv')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    log(`✅ CSV fetched successfully! Status: ${response.status}`, 'success');
+                    return response.text();
+                })
+                .then(csvText => {
+                    log(`✅ CSV text loaded! Length: ${csvText.length} characters`, 'success');
+                    
+                    Papa.parse(csvText, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: function(results) {
+                            log(`✅ Papa Parse complete! Rows: ${results.data.length}`, 'success');
+                            
+                            if (results.data && results.data.length > 0) {
+                                const firstRow = results.data[0];
+                                log(`✅ First row: ${JSON.stringify(firstRow)}`, 'success');
+                                
+                                // Extract queries
+                                const queries = results.data.map(row => row.ingestion_query).filter(Boolean);
+                                const uniqueQueries = [...new Set(queries)];
+                                log(`✅ Extracted ${uniqueQueries.length} unique queries`, 'success');
+                                log(`✅ Sample queries: ${uniqueQueries.slice(0, 5).join(', ')}`, 'success');
+                            } else {
+                                log('❌ No data found in CSV', 'error');
+                            }
+                        },
+                        error: function(error) {
+                            log(`❌ Papa Parse error: ${error.message}`, 'error');
+                        }
+                    });
+                })
+                .catch(error => {
+                    log(`❌ Fetch error: ${error.message}`, 'error');
+                });
+        }
+        
+        function testOriginalCSV() {
+            log('=== Testing eligible_image_report_20250829_1551.csv ===');
+            
+            fetch('eligible_image_report_20250829_1551.csv')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    log(`✅ CSV fetched successfully! Status: ${response.status}`, 'success');
+                    return response.text();
+                })
+                .then(csvText => {
+                    log(`✅ CSV text loaded! Length: ${csvText.length} characters`, 'success');
+                    
+                    Papa.parse(csvText, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: function(results) {
+                            log(`✅ Papa Parse complete! Rows: ${results.data.length}`, 'success');
+                            
+                            if (results.data && results.data.length > 0) {
+                                const firstRow = results.data[0];
+                                log(`✅ First row: ${JSON.stringify(firstRow)}`, 'success');
+                                
+                                // Extract queries
+                                const queries = results.data.map(row => row.ingestion_query).filter(Boolean);
+                                const uniqueQueries = [...new Set(queries)];
+                                log(`✅ Extracted ${uniqueQueries.length} unique queries`, 'success');
+                                log(`✅ Sample queries: ${uniqueQueries.slice(0, 5).join(', ')}`, 'success');
+                            } else {
+                                log('❌ No data found in CSV', 'error');
+                            }
+                        },
+                        error: function(error) {
+                            log(`❌ Papa Parse error: ${error.message}`, 'error');
+                        }
+                    });
+                })
+                .catch(error => {
+                    log(`❌ Fetch error: ${error.message}`, 'error');
+                });
+        }
+        
+        function testBothCSVs() {
+            log('=== Testing Both CSVs ===');
+            testCleanCSV();
+            setTimeout(() => {
+                log('--- Waiting 2 seconds before testing second CSV ---');
+                setTimeout(testOriginalCSV, 2000);
+            }, 1000);
+        }
+        
+        // Initialize
+        log('CSV Loading Test ready. Click a button to test CSV loading.');
+        log('Make sure you are running this through a local server (not opening file directly).');
+    </script>
+</body>
+</html> 

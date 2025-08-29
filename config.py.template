@@ -1,0 +1,52 @@
+# Configuration Template for Image Ingestion Analysis
+# Copy this file to config.py and update with your values
+
+# Database Configuration
+DB_CONFIG = {
+    'host': 'your-database-host.com',
+    'database': 'image_ingestion',
+    'user': 'your-username',
+    'password': 'your-password',
+    'port': 3306,  # Default MySQL port
+    'charset': 'utf8mb4'
+}
+
+# GCS Configuration
+GCS_CONFIG = {
+    'bucket_name': 'your-gcs-bucket',
+    'folder_name': 'originals',
+    'region': 'us-central1',  # Your GCS region
+    'endpoint_url': 'https://storage.googleapis.com'
+}
+
+# Eligibility Criteria (can be customized)
+ELIGIBILITY_CRITERIA = {
+    'syn_con_image_selection': 1,
+    'store_rank_max': 50,
+    'brisque_score_max': 50,
+    'aspect_ratio_min': 0.5,
+    'aspect_ratio_max': 2.0,
+    'excluded_hero_categories': ['jeans']  # Categories to exclude
+}
+
+# Logging Configuration
+LOGGING_CONFIG = {
+    'level': 'INFO',  # DEBUG, INFO, WARNING, ERROR
+    'format': '%(asctime)s - %(levelname)s - %(message)s',
+    'file': None  # Set to filename if you want file logging
+}
+
+# Output Configuration
+OUTPUT_CONFIG = {
+    'csv_filename_prefix': 'eligible_image_report',
+    'include_timestamp': True,
+    'timestamp_format': '%Y%m%d_%H%M'
+}
+
+# Performance Configuration
+PERFORMANCE_CONFIG = {
+    'batch_size': 100,  # Process image URLs in batches
+    'progress_log_interval': 100,  # Log progress every N records
+    'connection_timeout': 30,  # Database connection timeout in seconds
+    'query_timeout': 300  # Query timeout in seconds
+} 

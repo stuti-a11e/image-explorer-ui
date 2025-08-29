@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Ingestion Analytics & Explorer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="header">
+        <h1>Image Explorer</h1>
+        <div class="file-upload-area" id="fileUploadArea">
+            <label for="csvFile" class="upload-btn">Choose CSV File</label>
+            <input type="file" id="csvFile" accept=".csv">
+            <button class="load-existing-btn" onclick="loadExistingCSV()">Load Existing CSV</button>
+        </div>
+        <div class="file-upload-info" id="fileUploadInfo" style="display: none;">
+            <span class="tick">✓</span>
+            <span class="file-count" id="fileCount"></span>
+            <span class="total-count" id="totalCount"></span>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab('analytics')">Analytics</button>
+            <button class="tab-button" onclick="switchTab('explorer')">Explorer</button>
+        </div>
+
+        <div class="tab-content">
+            <div id="analytics" class="tab-pane active">
+                <div class="expandable-section">
+                    <div class="expandable-header" onclick="toggleSection('eligibilitySection')">
+                        <h3>Eligible vs Not Eligible (per ingestion query)</h3>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="expandable-content" id="eligibilitySection">
+                        <div class="analytics-controls">
+                            <h4>Sorting & Display Options</h4>
+                            <div class="control-row">
+                                <div class="control-group">
+                                    <label>Sort By:</label>
+                                    <div class="sort-buttons">
+                                        <button class="sort-button active" onclick="sortEligibility('eligible')">Eligible (High to Low)</button>
+                                        <button class="sort-button" onclick="sortEligibility('notEligible')">Not Eligible (High to Low)</button>
+                                    </div>
+                                </div>
+                                <div class="control-group">
+                                    <label>Show Top:</label>
+                                    <select id="eligibilityLimit" onchange="updateEligibilityDisplay()">
+                                        <option value="10">10</option>
+                                        <option value="20">20</option>
+                                        <option value="30" selected>30</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                        <option value="all">All</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <canvas id="eligibilityChart"></canvas>
+                        </div>
+                        
+                        <div class="pagination-controls">
+                            <div class="pagination-info" id="eligibilityPaginationInfo">
+                                Showing 1-30 of 0 queries
+                            </div>
+                            <div class="pagination" id="eligibilityPagination"></div>
+                        </div>
+                        
+                        <table class="summary-table" id="eligibilityTable">
+                            <thead>
+                                <tr>
+                                    <th>Ingestion Query</th>
+                                    <th>Eligible Count</th>
+                                    <th>Not Eligible Count</th>
+                                    <th>Total</th>
+                                    <th>% Eligible</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="expandable-section">
+                    <div class="expandable-header" onclick="toggleSection('storeRankSection')">
+                        <h3>Store Rank Distribution (per ingestion query)</h3>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="expandable-content" id="storeRankSection">
+                        <div class="analytics-controls">
+                            <h4>Display Options</h4>
+                            <div class="control-row">
+                                <div class="control-group">
+                                    <label>Show Top:</label>
+                                    <select id="storeRankLimit" onchange="updateStoreRankDisplay()">
+                                        <option value="10">10</option>
+                                        <option value="20">20</option>
+                                        <option value="30" selected>30</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                        <option value="all">All</option>
+                                    </select>
+                                </div>
+                                <div class="checkbox-group">
+                                    <input type="checkbox" id="storeRankCumulative" onchange="updateStoreRankDisplay()">
+                                    <label for="storeRankCumulative">Show cumulative ranges</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <canvas id="storeRankChart"></canvas>
+                        </div>
+                        
+                        <div class="pagination-controls">
+                            <div class="pagination-info" id="storeRankPaginationInfo">
+                                Showing 1-30 of 0 queries
+                            </div>
+                            <div class="pagination" id="storeRankPagination"></div>
+                        </div>
+                        
+                        <table class="summary-table" id="storeRankTable">
+                            <thead>
+                                <tr>
+                                    <th>Ingestion Query</th>
+                                    <th>&lt;10</th>
+                                    <th>&lt;30</th>
+                                    <th>&lt;50</th>
+                                    <th>&lt;70</th>
+                                    <th>&lt;100</th>
+                                    <th>≥100</th>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="explorer" class="tab-pane">
+                <div class="explorer-tabs">
+                    <button class="explorer-tab-button active" onclick="switchExplorerView('storeRank')">Store Rank View</button>
+                    <button class="explorer-tab-button" onclick="switchExplorerView('query')">Query to Image View</button>
+                </div>
+                
+                <div class="explorer-controls">
+                    <div class="filters-row">
+                        <div class="filter-group">
+                            <label>Ingestion Query:</label>
+                            <div class="searchable-dropdown">
+                                <input type="text" id="querySearchInput" placeholder="Search or select queries..." oninput="filterQueryDropdown()" onfocus="showQueryDropdown()" onblur="hideQueryDropdown()" onkeydown="handleSearchEnter(event)">
+                                <div class="dropdown-options" id="queryDropdownOptions">
+                                    <div class="dropdown-option" data-value="">All Queries</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 5px; display: flex; gap: 5px;">
+                                <button onclick="refreshQueryDropdown()" style="padding: 4px 8px; font-size: 12px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer;">Refresh Dropdown</button>
+                                <button onclick="forcePopulateDropdown()" style="padding: 4px 8px; font-size: 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">Force Populate</button>
+                                <button onclick="testDropdownManually()" style="padding: 4px 8px; font-size: 12px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer;">Test Dropdown</button>
+                            </div>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>Brisque Score:</label>
+                            <input type="number" id="brisqueScoreFilter" placeholder="Max score" step="0.1" onchange="updateExplorerFilters()">
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>Store Rank:</label>
+                            <div class="store-rank-filters">
+                                <button class="rank-filter-btn" data-range="0-10" onclick="selectStoreRankRange('0-10')">&lt;10</button>
+                                <button class="rank-filter-btn" data-range="10-30" onclick="selectStoreRankRange('10-30')">&lt;30</button>
+                                <button class="rank-filter-btn" data-range="30-50" onclick="selectStoreRankRange('30-50')">&lt;50</button>
+                                <button class="rank-filter-btn" data-range="50-70" onclick="selectStoreRankRange('50-70')">&lt;70</button>
+                                <button class="rank-filter-btn" data-range="70-100" onclick="selectStoreRankRange('70-100')">&lt;100</button>
+                                <button class="rank-filter-btn" data-range="100-200" onclick="selectStoreRankRange('100-200')">&lt;200</button>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="storeRankCumulativeExplorer" onchange="updateExplorerFilters()">
+                                <label for="storeRankCumulativeExplorer">Cumulative</label>
+                            </div>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>Syncon:</label>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="synConFilter" onchange="updateExplorerFilters()">
+                                <label for="synConFilter">Show only Syncon images</label>
+                            </div>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>Eligibility:</label>
+                            <select id="eligibilityFilter" onchange="updateExplorerFilters()">
+                                <option value="">All</option>
+                                <option value="eligible">Eligible</option>
+                                <option value="not eligible">Not Eligible</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="storeRankView" class="explorer-view active">
+                    <div class="chart-container">
+                        <canvas id="storeRankHistogram"></canvas>
+                    </div>
+                    <div id="storeRankImageGrid" class="image-grid"></div>
+                    <div class="pagination" id="storeRankImagePagination"></div>
+                </div>
+
+                <div id="queryView" class="explorer-view">
+                    <div id="queryImageGrid" class="image-grid"></div>
+                    <div class="pagination" id="queryImagePagination"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="image-modal">
+        <div class="image-modal-content">
+            <span class="image-modal-close" onclick="closeImageModal()">&times;</span>
+            <img id="modalImage" src="" alt="Full size image" onclick="toggleImageZoom()">
+            <div class="image-modal-controls">
+                <button onclick="resetImageZoom()">Reset Zoom</button>
+                <button onclick="zoomIn()">Zoom In</button>
+                <button onclick="zoomOut()">Zoom Out</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+</body>
+</html> 

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dropdown Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        .searchable-dropdown { position: relative; min-width: 300px; }
+        .searchable-dropdown input { width: 100%; padding: 8px; border: 1px solid #ccc; }
+        .dropdown-options { 
+            position: absolute; top: 100%; left: 0; right: 0; 
+            background: white; border: 1px solid #ccc; max-height: 200px; 
+            overflow-y: auto; display: none; z-index: 1000; 
+        }
+        .dropdown-options.show { display: block !important; }
+        .dropdown-option { padding: 8px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .dropdown-option:hover { background: #f0f0f0; }
+        button { margin: 5px; padding: 8px 16px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>Dropdown Debug Test</h1>
+    
+    <div class="test-section">
+        <h3>Test CSV Loading</h3>
+        <button onclick="loadTestCSV()">Load Test CSV</button>
+        <button onclick="loadRealCSV()">Load Real CSV</button>
+        <div id="csvStatus" class="log">No CSV loaded</div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test Dropdown</h3>
+        <div class="searchable-dropdown">
+            <input type="text" id="querySearchInput" placeholder="Search or select queries..." 
+                   oninput="filterQueryDropdown()" onfocus="showQueryDropdown()" onblur="hideQueryDropdown()">
+            <div class="dropdown-options" id="queryDropdownOptions">
+                <div class="dropdown-option" data-value="">All Queries</div>
+            </div>
+        </div>
+        <button onclick="testDropdown()">Test Dropdown</button>
+        <button onclick="forcePopulate()">Force Populate</button>
+        <div id="dropdownStatus" class="log">Dropdown not tested</div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Console Logs</h3>
+        <div id="consoleLog" class="log">Check browser console for detailed logs</div>
+    </div>
+
+    <script>
+        let csvData = [];
+        let allQueries = [];
+        
+        function log(message) {
+            console.log(message);
+            document.getElementById('consoleLog').textContent += '\n' + message;
+        }
+        
+        function loadTestCSV() {
+            log('=== Loading Test CSV ===');
+            
+            // Create test data
+            csvData = [
+                { ingestion_query: 'mini black dress zara' },
+                { ingestion_query: 'one shoulder dress' },
+                { ingestion_query: 'pink mini dress shiny' },
+                { ingestion_query: 'Silk White wedding dress' }
+            ];
+            
+            log(`Test CSV loaded with ${csvData.length} rows`);
+            log('Sample data: ' + JSON.stringify(csvData[0]));
+            
+            // Extract queries
+            const queries = csvData.map(row => row.ingestion_query).filter(Boolean);
+            allQueries = [...new Set(queries)];
+            log(`Extracted ${allQueries.length} unique queries: ${allQueries.join(', ')}`);
+            
+            document.getElementById('csvStatus').textContent = `Test CSV loaded: ${csvData.length} rows, ${allQueries.length} unique queries`;
+        }
+        
+        function loadRealCSV() {
+            log('=== Loading Real CSV ===');
+            
+            fetch('clean_image_report.csv')
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.text();
+                })
+                .then(csvText => {
+                    log('CSV fetched successfully, length: ' + csvText.length);
+                    
+                    Papa.parse(csvText, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: function(results) {
+                            log(`Papa Parse complete: ${results.data.length} rows`);
+                            
+                            if (results.data && results.data.length > 0) {
+                                csvData = results.data;
+                                log('First row: ' + JSON.stringify(results.data[0]));
+                                
+                                // Extract queries
+                                const queries = csvData.map(row => row.ingestion_query).filter(Boolean);
+                                allQueries = [...new Set(queries)];
+                                log(`Extracted ${allQueries.length} unique queries`);
+                                log('Sample queries: ' + allQueries.slice(0, 5).join(', '));
+                                
+                                document.getElementById('csvStatus').textContent = `Real CSV loaded: ${csvData.length} rows, ${allQueries.length} unique queries`;
+                            }
+                        },
+                        error: function(error) {
+                            log('Papa Parse error: ' + error.message);
+                        }
+                    });
+                })
+                .catch(error => {
+                    log('Error loading CSV: ' + error.message);
+                });
+        }
+        
+        function testDropdown() {
+            log('=== Testing Dropdown ===');
+            
+            const dropdownOptions = document.getElementById('queryDropdownOptions');
+            log('Dropdown element found: ' + !!dropdownOptions);
+            
+            if (dropdownOptions) {
+                log('Current children: ' + dropdownOptions.children.length);
+                log('Current HTML: ' + dropdownOptions.innerHTML);
+            }
+            
+            if (allQueries.length > 0) {
+                log('Attempting to populate dropdown...');
+                populateDropdown();
+            } else {
+                log('No queries available to populate');
+            }
+        }
+        
+        function populateDropdown() {
+            log('=== Populating Dropdown ===');
+            
+            const dropdownOptions = document.getElementById('queryDropdownOptions');
+            if (!dropdownOptions) {
+                log('ERROR: Dropdown element not found!');
+                return;
+            }
+            
+            log('Clearing dropdown...');
+            dropdownOptions.innerHTML = '';
+            
+            log('Adding "All Queries" option...');
+            const allOption = document.createElement('div');
+            allOption.className = 'dropdown-option';
+            allOption.setAttribute('data-value', '');
+            allOption.textContent = 'All Queries';
+            allOption.onclick = () => selectQuery('');
+            dropdownOptions.appendChild(allOption);
+            
+            log(`Adding ${allQueries.length} query options...`);
+            allQueries.forEach((query, index) => {
+                log(`Adding query ${index + 1}: ${query}`);
+                const option = document.createElement('div');
+                option.className = 'dropdown-option';
+                option.setAttribute('data-value', query);
+                option.textContent = query;
+                option.onclick = () => selectQuery(query);
+                dropdownOptions.appendChild(option);
+            });
+            
+            log(`Dropdown populated with ${dropdownOptions.children.length} total options`);
+            log('Final HTML: ' + dropdownOptions.innerHTML);
+            
+            document.getElementById('dropdownStatus').textContent = `Dropdown populated: ${dropdownOptions.children.length} options`;
+        }
+        
+        function forcePopulate() {
+            log('=== Force Populate ===');
+            if (csvData.length === 0) {
+                log('No CSV data available');
+                return;
+            }
+            
+            // Re-extract queries
+            const queries = csvData.map(row => row.ingestion_query).filter(Boolean);
+            allQueries = [...new Set(queries)];
+            log(`Force extracted ${allQueries.length} unique queries`);
+            
+            populateDropdown();
+        }
+        
+        function showQueryDropdown() {
+            const dropdownOptions = document.getElementById('queryDropdownOptions');
+            if (dropdownOptions) {
+                dropdownOptions.classList.add('show');
+                dropdownOptions.style.display = 'block';
+                log('Dropdown shown');
+            }
+        }
+        
+        function hideQueryDropdown() {
+            setTimeout(() => {
+                const dropdownOptions = document.getElementById('queryDropdownOptions');
+                if (dropdownOptions) {
+                    dropdownOptions.classList.remove('show');
+                    dropdownOptions.style.display = 'none';
+                    log('Dropdown hidden');
+                }
+            }, 200);
+        }
+        
+        function filterQueryDropdown() {
+            const searchInput = document.getElementById('querySearchInput');
+            const dropdownOptions = document.getElementById('queryDropdownOptions');
+            const searchTerm = searchInput.value.toLowerCase();
+            
+            if (!dropdownOptions) return;
+            
+            showQueryDropdown();
+            
+            const options = dropdownOptions.querySelectorAll('.dropdown-option');
+            options.forEach(option => {
+                const query = option.textContent.toLowerCase();
+                if (query.includes(searchTerm)) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        }
+        
+        function selectQuery(query) {
+            log('Query selected: ' + query);
+            document.getElementById('querySearchInput').value = query;
+            hideQueryDropdown();
+        }
+        
+        // Initialize
+        log('Test page loaded. Click "Load Test CSV" to start testing.');
+    </script>
+</body>
+</html> 
