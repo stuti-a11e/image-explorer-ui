@@ -1,7 +1,7 @@
 // Global variables
 let csvData = [];
 let currentTab = 'analytics';
-let currentExplorerView = 'storeRank';
+let currentExplorerView = 'storeRank'; // Default to match HTML
 let currentPage = 1;
 const itemsPerPage = 50;
 
@@ -120,10 +120,11 @@ function handleFileUpload(event) {
                     updateFileUploadInfo(csvData.length);
                     updateAnalytics();
                     
-                    // Ensure explorer controls are updated
-                    setTimeout(() => {
-                        updateExplorerControls();
-                    }, 100);
+                        // Ensure explorer controls are updated (but don't process views yet)
+    setTimeout(() => {
+        updateExplorerControls();
+        // Don't call updateCurrentView() here - let user choose view manually
+    }, 100);
                     
                     saveState();
                 } else {
@@ -144,6 +145,7 @@ function handleFileUpload(event) {
                     
                     setTimeout(() => {
                         updateExplorerControls();
+                        // Don't call updateCurrentView() here - let user choose view manually
                     }, 100);
                     
                     saveState();
@@ -794,9 +796,15 @@ function switchExplorerView(view) {
 
 // Update current view
 function updateCurrentView() {
+    console.log('=== updateCurrentView called ===');
+    console.log('Current explorer view:', currentExplorerView);
+    console.log('CSV data length before view update:', csvData.length);
+    
     if (currentExplorerView === 'storeRank') {
+        console.log('Updating Store Rank View...');
         updateStoreRankExplorer();
     } else {
+        console.log('Updating Query Image View...');
         updateQueryImageView();
     }
 }
