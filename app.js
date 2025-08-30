@@ -3,7 +3,7 @@ let csvData = [];
 let currentTab = 'analytics';
 let currentExplorerView = 'storeRank';
 let currentPage = 1;
-const itemsPerPage = 20;
+const itemsPerPage = 50;
 
 // Analytics pagination variables
 let eligibilityCurrentPage = 1;
@@ -408,6 +408,9 @@ function selectStoreRankRange(range) {
 
 // Update explorer filters
 function updateExplorerFilters() {
+    // Reset to first page when filters change
+    currentPage = 1;
+    
     if (currentExplorerView === 'storeRank') {
         updateStoreRankExplorer();
     } else {
@@ -526,7 +529,7 @@ function createImageCard(row) {
         <div class="image-container">
             <img src="${imageUrl}" alt="Image" onerror="this.src='https://via.placeholder.com/350x350?text=Image+Error'">
             <button class="zoom-button" onclick="openImageModal('${imageUrl}')" title="Zoom Image">🔍</button>
-            <button class="info-button" onclick="showImageInfo('${cardId}', '${imageUrl}', '${row.alle_ingestion_id || ''}', '${row.alle_media_key || ''}', '${row.store_rank || ''}', '${row.brisque_score || ''}', '${row.syn_con_image_selection || ''}', '${row.eligible || ''}', '${row.ingestion_query || ''}')" title="Image Information">ℹ️</button>
+                           <button class="info-button" onclick="showImageInfo('${cardId}', '${imageUrl}', '${row.alle_ingestion_id || ''}', '${row.alle_media_key || ''}', '${row.store_rank || ''}', '${row.brisque_score || ''}', '${row.syn_con_image_selection || ''}', '${row.eligible || ''}', '${row.ingestion_query || ''}', '${imageUrl}')" title="Image Information">ℹ️</button>
         </div>
     `;
     
@@ -769,11 +772,14 @@ function updateImageGrid(data, gridId, paginationId) {
     });
     
     // Update pagination
-    updatePagination(document.getElementById(paginationId), totalPages, currentPage);
+    updatePagination(document.getElementById(paginationId), totalPages, currentPage, (newPage) => {
+        currentPage = newPage;
+        updateCurrentView();
+    });
 }
 
 // Update pagination
-function updatePagination(paginationElement, totalPages, currentPage) {
+function updatePagination(paginationElement, totalPages, currentPage, onPageChange) {
     if (!paginationElement) return;
     
     paginationElement.innerHTML = '';
@@ -785,8 +791,7 @@ function updatePagination(paginationElement, totalPages, currentPage) {
     prevBtn.textContent = '← Previous';
     prevBtn.disabled = currentPage === 1;
     prevBtn.onclick = () => {
-        currentPage--;
-        updateCurrentView();
+        onPageChange(currentPage - 1);
     };
     paginationElement.appendChild(prevBtn);
 
@@ -797,8 +802,7 @@ function updatePagination(paginationElement, totalPages, currentPage) {
             pageBtn.textContent = i;
             pageBtn.className = i === currentPage ? 'active' : '';
             pageBtn.onclick = () => {
-                currentPage = i;
-                updateCurrentView();
+                onPageChange(i);
             };
             paginationElement.appendChild(pageBtn);
         } else if (i === currentPage - 3 || i === currentPage + 3) {
@@ -814,8 +818,7 @@ function updatePagination(paginationElement, totalPages, currentPage) {
     nextBtn.textContent = 'Next →';
     nextBtn.disabled = currentPage === totalPages;
     nextBtn.onclick = () => {
-        currentPage++;
-        updateCurrentView();
+        onPageChange(currentPage + 1);
     };
     paginationElement.appendChild(nextBtn);
 }
@@ -1244,7 +1247,7 @@ function resetImageZoom() {
 }
 
 // Show image info popup
-function showImageInfo(cardId, imageUrl, alleIngestionId, alleMediaKey, storeRank, brisqueScore, synCon, eligible, ingestionQuery) {
+function showImageInfo(cardId, imageUrl, alleIngestionId, alleMediaKey, storeRank, brisqueScore, synCon, eligible, ingestionQuery, imageUrlParam) {
     // Create popup container
     const popup = document.createElement('div');
     popup.className = 'image-info-popup';
@@ -1289,6 +1292,10 @@ function showImageInfo(cardId, imageUrl, alleIngestionId, alleMediaKey, storeRan
                     <div class="info-row">
                         <span class="info-label">Ingestion Query:</span>
                         <span class="info-value">${ingestionQuery || 'N/A'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Image URL:</span>
+                        <span class="info-value" style="word-break: break-all; max-width: 300px;">${imageUrlParam || 'N/A'}</span>
                     </div>
                 </div>
             </div>
