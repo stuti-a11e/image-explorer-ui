@@ -127,52 +127,9 @@ function handleFileUpload(event) {
     reader.readAsText(file);
 }
 
-// Load existing CSV data
+// Load existing CSV data (for local development only)
 function loadExistingCSV() {
-    console.log('=== Loading existing CSV ===');
-    
-    // Try to load the clean CSV first, then fallback to the original
-    fetch('clean_image_report.csv')
-        .then(response => {
-            if (response.ok) {
-                return response.text();
-            }
-            return fetch('eligible_image_report_20250829_1551.csv').then(r => r.text());
-        })
-        .then(csvText => {
-            Papa.parse(csvText, {
-                header: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    if (results.data && results.data.length > 0) {
-                        csvData = results.data.map(row => ({
-                            alle_ingestion_id: row.alle_ingestion_id || '',
-                            alle_media_key: row.alle_media_key || '',
-                            ingestion_query: row.ingestion_query || '',
-                            store_rank: row.store_rank || '0',
-                            syn_con_image_selection: row.syn_con_image_selection || '',
-                            brisque_score: row.brisque_score || '0',
-                            eligible: row.eligible || '',
-                            image_url: row.image_url || ''
-                        }));
-                        
-                        showMessage(`Successfully loaded ${csvData.length} records from existing CSV`, 'success');
-                        updateFileUploadInfo(csvData.length);
-                        updateAnalytics();
-                        updateExplorerControls(); // Ensure this gets called
-                        saveState();
-                    } else {
-                        showMessage('No data found in existing CSV file', 'error');
-                    }
-                },
-                error: function(error) {
-                    showMessage('Error parsing existing CSV file: ' + error.message, 'error');
-                }
-            });
-        })
-        .catch(error => {
-            showMessage('Error loading existing CSV file: ' + error.message, 'error');
-        });
+    showMessage('Please use the "Choose CSV File" button to upload your CSV file.', 'info');
 }
 
 // Update file upload info
