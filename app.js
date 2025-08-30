@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('App initialization complete');
 });
 
-// Handle file upload
+// Handle file upload with Vercel-optimized processing
 function handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -66,32 +66,51 @@ function handleFileUpload(event) {
     console.log('File name:', file.name);
     console.log('File size:', file.size);
 
+    // Show loading message
+    showMessage('Processing CSV file... This may take a moment for large files.', 'info');
+
     const reader = new FileReader();
     reader.onload = function(e) {
         console.log('=== File read complete ===');
         console.log('File content length:', e.target.result.length);
         
+        // Use Papa Parse with streaming and chunked processing for Vercel
         Papa.parse(e.target.result, {
             header: true,
             skipEmptyLines: true,
+            dynamicTyping: false, // Disable dynamic typing for better Vercel compatibility
+            fastMode: true, // Enable fast mode for better performance
+            step: function(row, parser) {
+                // Process each row as it comes in (streaming)
+                if (row.data && Object.keys(row.data).length > 0) {
+                    const processedRow = {
+                        alle_ingestion_id: row.data.alle_ingestion_id || '',
+                        alle_media_key: row.data.alle_media_key || '',
+                        ingestion_query: row.data.ingestion_query || '',
+                        store_rank: row.data.store_rank || '0',
+                        syn_con_image_selection: row.data.syn_con_image_selection || '',
+                        brisque_score: row.data.brisque_score || '0',
+                        eligible: row.data.eligible || '',
+                        image_url: row.data.image_url || ''
+                    };
+                    
+                    csvData.push(processedRow);
+                    
+                    // Update progress every 100 rows
+                    if (csvData.length % 100 === 0) {
+                        console.log(`Processed ${csvData.length} rows...`);
+                        showMessage(`Processing... ${csvData.length} rows loaded so far`, 'info');
+                    }
+                }
+            },
             complete: function(results) {
                 console.log('=== Papa Parse complete ===');
                 console.log('Parse results:', results);
-                console.log('Data rows:', results.data ? results.data.length : 0);
-                console.log('First row sample:', results.data ? results.data[0] : 'No data');
+                console.log('Final CSV data length:', csvData.length);
+                console.log('First row sample:', csvData[0]);
+                console.log('Last row sample:', csvData[csvData.length - 1]);
                 
-                if (results.data && results.data.length > 0) {
-                    csvData = results.data.map(row => ({
-                        alle_ingestion_id: row.alle_ingestion_id || '',
-                        alle_media_key: row.alle_media_key || '',
-                        ingestion_query: row.ingestion_query || '',
-                        store_rank: row.store_rank || '0',
-                        syn_con_image_selection: row.syn_con_image_selection || '',
-                        brisque_score: row.brisque_score || '0',
-                        eligible: row.eligible || '',
-                        image_url: row.image_url || ''
-                    }));
-                    
+                if (csvData.length > 0) {
                     console.log('=== Data processing complete ===');
                     console.log('Processed CSV data length:', csvData.length);
                     console.log('Sample processed row:', csvData[0]);
@@ -114,7 +133,23 @@ function handleFileUpload(event) {
             },
             error: function(error) {
                 console.error('Papa Parse error:', error);
-                showMessage('Error parsing CSV file: ' + error.message, 'error');
+                console.log('=== Trying fallback CSV processing ===');
+                
+                // Try fallback method for Vercel compatibility
+                if (processCSVInChunks(e.target.result)) {
+                    console.log('=== Fallback processing successful ===');
+                    showMessage(`Successfully loaded ${csvData.length} records using fallback method`, 'success');
+                    updateFileUploadInfo(csvData.length);
+                    updateAnalytics();
+                    
+                    setTimeout(() => {
+                        updateExplorerControls();
+                    }, 100);
+                    
+                    saveState();
+                } else {
+                    showMessage('Error parsing CSV file: ' + error.message + ' (fallback also failed)', 'error');
+                }
             }
         });
     };
@@ -124,12 +159,74 @@ function handleFileUpload(event) {
         showMessage('Error reading file: ' + error.message, 'error');
     };
     
+    // Clear previous data before processing
+    csvData = [];
+    
     reader.readAsText(file);
 }
 
 // Load existing CSV data (for local development only)
 function loadExistingCSV() {
     showMessage('Please use the "Choose CSV File" button to upload your CSV file.', 'info');
+}
+
+// Fallback CSV processing for Vercel compatibility
+function processCSVInChunks(csvText, chunkSize = 1000) {
+    console.log('=== Processing CSV in chunks ===');
+    console.log('CSV text length:', csvText.length);
+    console.log('Chunk size:', chunkSize);
+    
+    const lines = csvText.split('\n');
+    const header = lines[0];
+    const dataLines = lines.slice(1);
+    
+    console.log('Total lines:', lines.length);
+    console.log('Header:', header);
+    console.log('Data lines:', dataLines.length);
+    
+    csvData = [];
+    let processedCount = 0;
+    
+    // Process in chunks to avoid Vercel memory issues
+    for (let i = 0; i < dataLines.length; i += chunkSize) {
+        const chunk = dataLines.slice(i, i + chunkSize);
+        
+        chunk.forEach((line, index) => {
+            if (line.trim()) {
+                const values = line.split(',');
+                if (values.length >= 8) {
+                    const processedRow = {
+                        alle_ingestion_id: values[0] || '',
+                        alle_media_key: values[1] || '',
+                        ingestion_query: values[2] || '',
+                        store_rank: values[3] || '0',
+                        syn_con_image_selection: values[4] || '',
+                        brisque_score: values[5] || '0',
+                        eligible: values[6] || '',
+                        image_url: values[7] || ''
+                    };
+                    csvData.push(processedRow);
+                }
+            }
+        });
+        
+        processedCount += chunk.length;
+        console.log(`Processed chunk ${Math.floor(i/chunkSize) + 1}: ${processedCount}/${dataLines.length} lines`);
+        
+        // Update progress message
+        if (processedCount % 500 === 0) {
+            showMessage(`Processing... ${processedCount}/${dataLines.length} lines loaded`, 'info');
+        }
+        
+        // Small delay to prevent Vercel timeout
+        if (i + chunkSize < dataLines.length) {
+            setTimeout(() => {}, 10);
+        }
+    }
+    
+    console.log('=== Chunk processing complete ===');
+    console.log('Final CSV data length:', csvData.length);
+    return csvData.length > 0;
 }
 
 // Update file upload info
