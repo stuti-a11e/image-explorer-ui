@@ -43,13 +43,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load existing state
     loadState();
     
-    // If CSV data is already loaded, update controls
-    if (csvData && csvData.length > 0) {
-        console.log('CSV data already loaded, updating controls...');
-        updateFileUploadInfo(csvData.length);
-        updateAnalytics();
-        updateExplorerControls();
-    }
+    // Don't auto-load CSV data - user must upload manually
+    // if (csvData && csvData.length > 0) {
+    //     console.log('CSV data already loaded, updating controls...');
+    //     updateFileUploadInfo(csvData.length);
+    //     updateAnalytics();
+    //     updateExplorerControls();
+    // }
     
     // Initialize expandable sections
     initializeExpandableSections();
@@ -717,10 +717,20 @@ function updateImageGrid(data, gridId, paginationId) {
     }
     
     // Calculate pagination
+    console.log('=== Pagination Debug ===');
+    console.log('Data length:', data.length);
+    console.log('Items per page:', itemsPerPage);
+    console.log('Total pages:', Math.ceil(data.length / itemsPerPage));
+    console.log('Current page:', currentPage);
+    
     const totalPages = Math.ceil(data.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const pageData = data.slice(startIndex, endIndex);
+    
+    console.log('Start index:', startIndex);
+    console.log('End index:', endIndex);
+    console.log('Page data length:', pageData.length);
     
     // Create image cards
     pageData.forEach(row => {
@@ -737,6 +747,11 @@ function updateImageGrid(data, gridId, paginationId) {
 
 // Update pagination
 function updatePagination(paginationElement, totalPages, currentPage, onPageChange) {
+    console.log('=== updatePagination Debug ===');
+    console.log('Total pages:', totalPages);
+    console.log('Current page:', currentPage);
+    console.log('Pagination element:', paginationElement);
+    
     if (!paginationElement) return;
     
     paginationElement.innerHTML = '';
@@ -1340,27 +1355,27 @@ function loadState() {
             }
         }
         
-        // Try to load CSV data from localStorage
-        const savedCSVData = localStorage.getItem('imageIngestionCSVData');
-        if (savedCSVData) {
-            try {
-                csvData = JSON.parse(savedCSVData);
-                console.log('Loaded CSV data from localStorage:', csvData.length, 'rows');
-                
-                // Extract queries and populate dropdown
-                const queries = csvData.map(row => row.ingestion_query).filter(Boolean);
-                allQueries = [...new Set(queries)];
-                console.log('Extracted queries from saved data:', allQueries.length);
-                
-                // Update UI
-                updateFileUploadInfo(csvData.length);
-                updateAnalytics();
-                updateExplorerControls();
-            } catch (e) {
-                console.error('Error parsing saved CSV data:', e);
-                csvData = [];
-            }
-        }
+        // Don't auto-load CSV data - user must upload manually
+        // const savedCSVData = localStorage.getItem('imageIngestionCSVData');
+        // if (savedCSVData) {
+        //     try {
+        //         csvData = JSON.parse(savedCSVData);
+        //         console.log('Loaded CSV data from localStorage:', csvData.length, 'rows');
+        //         
+        //         // Extract queries and populate dropdown
+        //         const queries = csvData.map(row => row.ingestion_query).filter(Boolean);
+        //         allQueries = [...new Set(queries)];
+        //         console.log('Extracted queries from saved data:', allQueries.length);
+        //         
+        //         // Update UI
+        //         updateFileUploadInfo(csvData.length);
+        //         updateAnalytics();
+        //         updateExplorerControls();
+        //     } catch (e) {
+        //         console.error('Error parsing saved CSV data:', e);
+        //         csvData = [];
+        //     }
+        // }
     } catch (e) {
         console.log('No saved state found');
     }
